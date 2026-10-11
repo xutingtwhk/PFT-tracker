@@ -40,3 +40,5 @@ Open the address, then:
 - Interpretation follows the ATS/ERS 2022 technical standard: normal if z ≥ −1.645. FEV₁ severity is mild (−1.65 to −2.5), moderate (−2.5 to −4) or severe (< −4). An FEV₁/FVC below the LLN indicates obstruction; a low FVC or FEV₁ with a preserved ratio may suggest restriction, to be confirmed with lung volumes.
 
 This app is for research and self-tracking. It is not a medical device and does not give a diagnosis.
+
+**Acknowledgment:** App code, GLI equation implementation and documentation were developed with assistance from Claude (Anthropic). The author reviewed and validated the calculations.
