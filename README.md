@@ -13,22 +13,7 @@ This is a Progressive Web App (PWA): a website that installs onto a phone, table
 | `sw.js` | Service worker that caches the app so it works offline |
 | `icons/` | App icons (standard, maskable for Android, Apple touch icon) |
 
-## 1. Put it online (one time, about 5 minutes)
-
-A PWA can only be installed from an **https://** address, so upload the folder to a static host. Both options below are free.
-
-**Option A: Netlify Drop (fastest, no setup)**
-1. Go to https://app.netlify.com/drop and sign in.
-2. Drag this whole folder onto the page.
-3. You get an address like `https://something.netlify.app`. You can rename it under *Site configuration → Change site name*.
-
-**Option B: GitHub Pages**
-1. Create a new repository on GitHub, e.g. `lung-tracker`.
-2. Upload every file in this folder, keeping the `icons` folder, to the repository root.
-3. Go to *Settings → Pages*, set *Source* to "Deploy from a branch", choose `main` and `/ (root)`, then save.
-4. After a minute the app is live at `https://<your-username>.github.io/lung-tracker/`.
-
-## 2. Install it
+## 1. Install it
 
 Open the address, then:
 
@@ -37,7 +22,7 @@ Open the address, then:
 - **Mac / Windows (Chrome or Edge):** click **Install app** in the sidebar, or the install icon at the right of the address bar.
 - **Mac (Safari 17+):** **File → Add to Dock**.
 
-## 3. Where the data is stored
+## 2. Where the data is stored
 
 - Everything stays **on the device** in the app's own browser storage. Nothing is sent to a server, and the host only serves the app's files.
 - Each device and browser keeps its own records; they don't sync. On iPhone, the installed app's storage is separate from Safari's.
@@ -45,10 +30,6 @@ Open the address, then:
 - "Export tests (CSV)" gives one row per test with the measured value, predicted value, LLN, % predicted and z-score for each measure, ready for R, SPSS or Excel.
 
 *Research use:* because data never leaves the device, each device holds its own identifiable health data. If participants will use their own devices, or you need central collection, check the storage, backup and transfer plan with your IRB. Moving the data to a server would need a backend with authentication, which this version doesn't have.
-
-## 4. Updating the app
-
-After editing `index.html`, open `sw.js` and change `const VERSION = "v1"` to `"v2"` (and so on), then re-upload. Installed copies pick up the new version the next time they're opened online. Stored records are not affected.
 
 ## Reference equations and method
 
