@@ -1,6 +1,6 @@
 /* Lung Function Tracker service worker: offline app shell.
    Bump VERSION whenever you change index.html so installed copies update. */
-const VERSION = "v1";
+const VERSION = "v2";
 const SHELL = `ltracker-shell-${VERSION}`;
 const RUNTIME = "ltracker-runtime";
 const ASSETS = ["./", "./index.html", "./manifest.webmanifest",
