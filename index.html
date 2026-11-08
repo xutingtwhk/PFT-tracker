@@ -106,6 +106,9 @@ main{display:flex;flex-direction:column;gap:18px;min-width:0}
 @media (max-width:420px){.field.wide{grid-column:auto}}
 .field{display:flex;flex-direction:column;gap:4px;min-width:0}
 .field label{font-size:.78rem;font-weight:600;color:var(--ink-2)}
+.ast{color:var(--accent);font-weight:700;margin-left:2px}
+.where{margin:-4px 0 0;font-size:.8rem;color:var(--ink-2);background:var(--accent-soft);border-radius:8px;padding:8px 10px;line-height:1.45}
+.where .ast{margin:0 4px 0 0}
 .field .opt{font-weight:400;color:var(--muted)}
 .field .hint{font-size:.72rem;color:var(--muted)}
 .field input,.field select{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:7px 9px;width:100%;min-width:0}
@@ -239,9 +242,10 @@ td.notecell{text-align:left;max-width:260px;white-space:normal;min-width:160px;c
             <div class="field wide"><label for="tHeight">Height at this test <span class="opt">(optional)</span></label>
               <div class="unitwrap"><input id="tHeight" type="number" step="0.1" inputmode="decimal"><select id="tHeightUnit" aria-label="Height unit"><option value="cm">cm</option><option value="in">in</option></select></div>
             <span class="hint" id="heightHint">Leave blank to use the height in the profile</span></div>
-            <div class="field"><label for="tFev1">FEV₁ (L)</label><input id="tFev1" type="number" step="0.01" min="0" inputmode="decimal"><span class="hint">Leave blank if not measured</span></div>
-            <div class="field"><label for="tFvc">FVC (L)</label><input id="tFvc" type="number" step="0.01" min="0" inputmode="decimal"><span class="hint">Leave blank if not measured</span></div>
+            <div class="field"><label for="tFev1">FEV₁ (L)<span class="ast" aria-hidden="true">*</span></label><input id="tFev1" aria-describedby="pftWhere" type="number" step="0.01" min="0" inputmode="decimal"><span class="hint">Leave blank if not measured</span></div>
+            <div class="field"><label for="tFvc">FVC (L)<span class="ast" aria-hidden="true">*</span></label><input id="tFvc" aria-describedby="pftWhere" type="number" step="0.01" min="0" inputmode="decimal"><span class="hint">Leave blank if not measured</span></div>
             <div class="field" id="fefField"><label for="tFef">FEF₂₅₋₇₅ (L/s)</label><input id="tFef" type="number" step="0.01" min="0" inputmode="decimal"><span class="hint">Optional · GLI-2012 only</span></div>
+            <p class="where" id="pftWhere" style="grid-column:1/-1"><span class="ast">*</span> FEV₁ and FVC can be found on your PFT report in the column labeled <b>“Actual”</b> or <b>“Pre”</b>. If it isn’t clear which number to use, ask your provider.</p>
             <div class="field" style="grid-column:1/-1"><label for="tNote">Note</label><input id="tNote" type="text" maxlength="200" placeholder="e.g. after starting medication X, during illness"><span class="hint">Shown on the graph, in All tests and in the result details</span></div>
           </div>
           <div class="form-actions">
@@ -657,7 +661,7 @@ function renderResult(){
         '<i style="left:' + lln + '%;width:2px;background:var(--ink);opacity:.55;border-radius:0"></i></div>' +
       '<dl><dt>Measured</dt><dd>' + fmt(r.x, d.dp) + '</dd><dt>Predicted</dt><dd>' + fmt(r.M, d.dp) + '</dd>' +
       '<dt>LLN</dt><dd>' + fmt(r.LLN, d.dp) + '</dd><dt>z-score</dt><dd>' + fmtZ(r.z) + '</dd>' +
-      '<dt>Percentile</dt><dd>' + (r.centile != null ? (r.centile < 1 ? "<1" : r.centile.toFixed(0)) : "—") + '</dd></dl></div>';
+      '</dl></div>';
   });
   $("cards").innerHTML = html || '<p class="muted">No FEV₁ or FVC recorded for this test.</p>';
   $("interp").innerHTML = '<div class="interp-body">' +
@@ -688,23 +692,32 @@ function niceTicks(lo, hi, n){
   for (var v = t0; v <= t1 + step/2; v += step) out.push(+v.toFixed(10));
   return out;
 }
-/* Calendar ticks: evenly spaced months or years, each on the 1st of the month. */
-function timeTicks(x0, x1, maxTicks){
-  var spanMonths = (x1 - x0) / (30.44*864e5);
-  var steps = [1, 2, 3, 6, 12, 24, 60, 120], step = steps[steps.length-1];
-  for (var i = 0; i < steps.length; i++){ if (spanMonths / steps[i] <= maxTicks){ step = steps[i]; break; } }
-  var d = new Date(x0), mi = d.getUTCFullYear()*12 + d.getUTCMonth();
-  if (Date.UTC(Math.floor(mi/12), mi%12, 1) < x0) mi++;
-  while (mi % step !== 0) mi++;
-  var out = [];
-  for (; ; mi += step){
-    var y = Math.floor(mi/12), m = mi % 12, x = Date.UTC(y, m, 1);
-    if (x > x1) break;
-    out.push({x:x, y:y, m:m});
+/* Calendar ticks on the 1st of the month.
+   Under ~18 months: a gridline every 1, 2, 3 or 6 months, each labelled.
+   Longer: a gridline every year; year labels are thinned (every 1, 2, 5 or 10 years)
+   only when the graph is too narrow to label every year. */
+function timeTicks(x0, x1, maxLabels, maxYearLabels){
+  var spanMonths = (x1 - x0) / (30.44*864e5), out = [];
+  function gen(stepM){
+    var d = new Date(x0), mi = d.getUTCFullYear()*12 + d.getUTCMonth();
+    if (Date.UTC(Math.floor(mi/12), mi%12, 1) < x0) mi++;
+    while (mi % stepM !== 0) mi++;
+    for (; ; mi += stepM){
+      var y = Math.floor(mi/12), m = mi % 12, x = Date.UTC(y, m, 1);
+      if (x > x1) break;
+      out.push({x:x, y:y, m:m});
+    }
   }
-  out.forEach(function(t, k){
-    t.label = step >= 12 ? String(t.y) : MONTHS[t.m] + (step >= 3 || t.m === 0 || k === 0 ? " " + t.y : "");
-  });
+  if (spanMonths <= 18){
+    var steps = [1, 2, 3, 6], step = 6;
+    for (var i = 0; i < steps.length; i++){ if (spanMonths / steps[i] <= maxLabels){ step = steps[i]; break; } }
+    gen(step);
+    out.forEach(function(t, k){ t.label = MONTHS[t.m] + (step >= 3 || t.m === 0 || k === 0 ? " " + t.y : ""); });
+  } else {
+    gen(12);
+    var ls = [1, 2, 5, 10, 20].find(function(n){ return out.length / n <= maxYearLabels; }) || 20;
+    out.forEach(function(t){ t.label = t.y % ls === 0 ? String(t.y) : ""; });
+  }
   return out;
 }
 var chartPts = [];
@@ -751,12 +764,12 @@ function renderChart(){
   var yl = el("text", {x:12, y:m.t + (H-m.t-m.b)/2, "text-anchor":"middle", transform:"rotate(-90 12 " + (m.t + (H-m.t-m.b)/2) + ")"});
   yl.textContent = mode === "abs" ? d.label + " (" + d.unit + ")" : "% of predicted";
   // vertical grid + x labels on calendar boundaries
-  var tt = timeTicks(x0, x1, Math.max(3, Math.floor(plotW / 78)));
+  var tt = timeTicks(x0, x1, Math.max(3, Math.floor(plotW / 78)), Math.max(3, Math.floor(plotW / 42)));
   tt.forEach(function(t){
     var X = sx(t.x);
     el("line", {x1:X, x2:X, y1:m.t, y2:H-m.b, stroke:"var(--line)", "stroke-width":1});
-    el("line", {x1:X, x2:X, y1:H-m.b, y2:H-m.b+5, stroke:"var(--muted)", "stroke-width":1});
-    var lab = el("text", {x:X, y:H-m.b+18, "text-anchor":"middle"}); lab.textContent = t.label;
+    el("line", {x1:X, x2:X, y1:H-m.b, y2:H-m.b+(t.label ? 5 : 3), stroke:"var(--muted)", "stroke-width":1});
+    if (t.label){ var lab = el("text", {x:X, y:H-m.b+18, "text-anchor":"middle"}); lab.textContent = t.label; }
   });
   el("line", {x1:m.l, x2:W-m.r, y1:H-m.b, y2:H-m.b, stroke:"var(--muted)", "stroke-width":1, opacity:.7});
   // reference band and lines
